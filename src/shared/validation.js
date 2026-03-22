@@ -142,6 +142,7 @@ function validateSaleLineItems(saleLineItemList) {
 
     if (
       typeof saleLineItem.agreedUnitPriceDollars !== 'number' ||
+      !Number.isFinite(saleLineItem.agreedUnitPriceDollars) ||
       saleLineItem.agreedUnitPriceDollars < 0
     ) {
       return {
