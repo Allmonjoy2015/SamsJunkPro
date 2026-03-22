@@ -43,8 +43,16 @@ function registerSalesIpcHandlers(ipcMain, databaseConnection) {
  * @returns {{ success: boolean, saleId?: number, errorMessage?: string }}
  */
 function handleCompleteSaleTransaction(databaseConnection, _event, saleTransactionData) {
+  if (!saleTransactionData || typeof saleTransactionData !== 'object') {
+    return { success: false, errorMessage: 'Invalid sale transaction payload: expected an object.' };
+  }
+
   const { customerId, taxRateDecimal = DEFAULT_TAX_RATE_DECIMAL, saleLineItemList, notes } =
     saleTransactionData;
+
+  if (!Number.isFinite(taxRateDecimal) || taxRateDecimal < 0 || taxRateDecimal > 1) {
+    return { success: false, errorMessage: 'Tax rate must be a number between 0 and 1.' };
+  }
 
   const lineItemValidationResult = validateSaleLineItems(saleLineItemList);
   if (!lineItemValidationResult.isValid) {
@@ -92,7 +100,16 @@ function handleCompleteSaleTransaction(databaseConnection, _event, saleTransacti
     return newSaleId;
   });
 
-  const newSaleId = persistCompletedSaleTransaction();
+  let newSaleId;
+  try {
+    newSaleId = persistCompletedSaleTransaction();
+  } catch (transactionError) {
+    const errorMessage =
+      transactionError && typeof transactionError.message === 'string'
+        ? transactionError.message
+        : 'Failed to record the completed sale transaction.';
+    return { success: false, errorMessage };
+  }
   return { success: true, saleId: newSaleId };
 }
 
@@ -104,7 +121,8 @@ function handleCompleteSaleTransaction(databaseConnection, _event, saleTransacti
  * @param {{ saleId: number }} payload
  * @returns {{ success: boolean, saleReceipt?: Object, errorMessage?: string }}
  */
-function handleGetSaleReceipt(databaseConnection, _event, { saleId }) {
+function handleGetSaleReceipt(databaseConnection, _event, payload) {
+  const { saleId } = (payload && typeof payload === 'object') ? payload : {};
   if (!Number.isInteger(saleId) || saleId <= 0) {
     return { success: false, errorMessage: 'A valid sale ID is required.' };
   }
@@ -153,7 +171,9 @@ function handleGetSaleReceipt(databaseConnection, _event, { saleId }) {
  * @param {{ summaryStartDate: string, summaryEndDate: string }} dateRange - ISO date strings.
  * @returns {{ success: boolean, salesSummary?: Object, errorMessage?: string }}
  */
-function handleGetSalesSummary(databaseConnection, _event, { summaryStartDate, summaryEndDate }) {
+function handleGetSalesSummary(databaseConnection, _event, payload) {
+  const { summaryStartDate, summaryEndDate } =
+    (payload && typeof payload === 'object') ? payload : {};
   if (!summaryStartDate || !summaryEndDate) {
     return { success: false, errorMessage: 'Both summaryStartDate and summaryEndDate are required.' };
   }
@@ -166,11 +186,15 @@ function handleGetSalesSummary(databaseConnection, _event, { summaryStartDate, s
       MAX(st.sale_date)                                      AS lastSaleDate
     FROM sale_transactions st
     JOIN sale_line_items sli ON sli.sale_id = st.sale_id
-    WHERE st.sale_status = 'completed'
-      AND st.sale_date BETWEEN @summaryStartDate AND @summaryEndDate
+    WHERE st.sale_status = @completedStatus
+      AND date(st.sale_date) BETWEEN date(@summaryStartDate) AND date(@summaryEndDate)
   `);
 
-  const salesSummary = selectSalesSummaryStatement.get({ summaryStartDate, summaryEndDate });
+  const salesSummary = selectSalesSummaryStatement.get({
+    summaryStartDate,
+    summaryEndDate,
+    completedStatus: SALE_STATUS.COMPLETED,
+  });
   return { success: true, salesSummary };
 }
 
@@ -182,13 +206,14 @@ function handleGetSalesSummary(databaseConnection, _event, { summaryStartDate, s
  * @param {{ saleId: number }} payload
  * @returns {{ success: boolean, errorMessage?: string }}
  */
-function handleVoidSaleTransaction(databaseConnection, _event, { saleId }) {
+function handleVoidSaleTransaction(databaseConnection, _event, payload) {
+  const { saleId } = (payload && typeof payload === 'object') ? payload : {};
   if (!Number.isInteger(saleId) || saleId <= 0) {
     return { success: false, errorMessage: 'A valid sale ID is required to void a transaction.' };
   }
 
   const markSaleAsVoidedStatement = databaseConnection.prepare(
-    `UPDATE sale_transactions SET sale_status = ? WHERE sale_id = ? AND sale_status = 'completed'`
+    `UPDATE sale_transactions SET sale_status = ? WHERE sale_id = ? AND sale_status = ?`
   );
 
   const restorePartAvailabilityStatement = databaseConnection.prepare(`
@@ -199,7 +224,7 @@ function handleVoidSaleTransaction(databaseConnection, _event, { saleId }) {
   `);
 
   const voidCompletedSaleTransaction = databaseConnection.transaction(() => {
-    const voidResult = markSaleAsVoidedStatement.run(SALE_STATUS.VOIDED, saleId);
+    const voidResult = markSaleAsVoidedStatement.run(SALE_STATUS.VOIDED, saleId, SALE_STATUS.COMPLETED);
     if (voidResult.changes === 0) {
       throw new Error(`Sale ID ${saleId} was not found or is not in 'completed' status.`);
     }

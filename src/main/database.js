@@ -12,14 +12,10 @@
 'use strict';
 
 const path = require('path');
-const { app } = require('electron');
 
 // Use better-sqlite3 for synchronous, straightforward SQLite access.
 // Install with: npm install better-sqlite3
 const Database = require('better-sqlite3');
-
-/** Absolute path to the SQLite database file stored in the user's app-data directory. */
-const DATABASE_FILE_PATH = path.join(app.getPath('userData'), 'samsjunkpro.db');
 
 /**
  * Opens the SQLite database and runs the initial schema migration.
@@ -28,10 +24,18 @@ const DATABASE_FILE_PATH = path.join(app.getPath('userData'), 'samsjunkpro.db');
  * @returns {import('better-sqlite3').Database} The open database connection.
  */
 function openDatabase() {
-  const databaseConnection = new Database(DATABASE_FILE_PATH);
+  const { app } = require('electron');
+
+  /** Absolute path to the SQLite database file stored in the user's app-data directory. */
+  const databaseFilePath = path.join(app.getPath('userData'), 'samsjunkpro.db');
+
+  const databaseConnection = new Database(databaseFilePath);
 
   // Enable WAL mode for better read/write concurrency.
   databaseConnection.pragma('journal_mode = WAL');
+
+  // Enforce referential integrity — SQLite disables this by default.
+  databaseConnection.pragma('foreign_keys = ON');
 
   runSchemaMigration(databaseConnection);
 
@@ -55,7 +59,8 @@ function runSchemaMigration(databaseConnection) {
       part_number         TEXT,
       part_condition      TEXT    NOT NULL,
       asking_price_cents  INTEGER NOT NULL DEFAULT 0,
-      is_sold             INTEGER NOT NULL DEFAULT 0,  -- 0 = available, 1 = sold
+      is_sold             INTEGER NOT NULL DEFAULT 0,  -- 0 = available, 1 = sold via sale transaction
+      is_removed          INTEGER NOT NULL DEFAULT 0,  -- 0 = active, 1 = manually removed from inventory
       date_added          TEXT    NOT NULL DEFAULT (datetime('now')),
       notes               TEXT
     );

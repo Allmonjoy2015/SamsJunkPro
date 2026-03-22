@@ -37,6 +37,32 @@ describe('validateSalvagePartData', () => {
     expect(validationResult.errorMessage).toBeNull();
   });
 
+  test('returns isValid false when called with null instead of an object', () => {
+    const validationResult = validateSalvagePartData(null);
+    expect(validationResult.isValid).toBe(false);
+    expect(validationResult.errorMessage).toMatch(/invalid salvage part payload/i);
+  });
+
+  test('returns isValid false when called with undefined instead of an object', () => {
+    const validationResult = validateSalvagePartData(undefined);
+    expect(validationResult.isValid).toBe(false);
+    expect(validationResult.errorMessage).toMatch(/invalid salvage part payload/i);
+  });
+
+  test('returns isValid false when asking price is NaN', () => {
+    const partDataWithNanPrice = { ...validSalvagePartData, askingPriceDollars: NaN };
+    const validationResult = validateSalvagePartData(partDataWithNanPrice);
+    expect(validationResult.isValid).toBe(false);
+    expect(validationResult.errorMessage).toMatch(/asking price/i);
+  });
+
+  test('returns isValid false when asking price is Infinity', () => {
+    const partDataWithInfinitePrice = { ...validSalvagePartData, askingPriceDollars: Infinity };
+    const validationResult = validateSalvagePartData(partDataWithInfinitePrice);
+    expect(validationResult.isValid).toBe(false);
+    expect(validationResult.errorMessage).toMatch(/asking price/i);
+  });
+
   test('returns isValid false when part name is an empty string', () => {
     const partDataMissingName = { ...validSalvagePartData, partName: '' };
     const validationResult = validateSalvagePartData(partDataMissingName);
@@ -106,6 +132,26 @@ describe('validateCustomerData', () => {
     expect(validationResult.errorMessage).toBeNull();
   });
 
+  test('returns isValid false when called with null instead of an object', () => {
+    const validationResult = validateCustomerData(null);
+    expect(validationResult.isValid).toBe(false);
+    expect(validationResult.errorMessage).toMatch(/invalid customer data payload/i);
+  });
+
+  test('returns isValid false when phone number is a number instead of a string', () => {
+    const customerDataWithNumericPhone = { ...validCustomerData, customerPhoneNumber: 5558675309 };
+    const validationResult = validateCustomerData(customerDataWithNumericPhone);
+    expect(validationResult.isValid).toBe(false);
+    expect(validationResult.errorMessage).toMatch(/phone number/i);
+  });
+
+  test('returns isValid false when email address is a number instead of a string', () => {
+    const customerDataWithNumericEmail = { ...validCustomerData, customerEmailAddress: 12345 };
+    const validationResult = validateCustomerData(customerDataWithNumericEmail);
+    expect(validationResult.isValid).toBe(false);
+    expect(validationResult.errorMessage).toMatch(/email/i);
+  });
+
   test('returns isValid true when optional phone and email are omitted', () => {
     const customerDataWithoutContactDetails = {
       customerFirstName: 'John',
@@ -165,6 +211,22 @@ describe('validateSaleLineItems', () => {
     const validationResult = validateSaleLineItems([]);
     expect(validationResult.isValid).toBe(false);
     expect(validationResult.errorMessage).toMatch(/at least one/i);
+  });
+
+  test('returns isValid false when a line item is null', () => {
+    const lineItemsContainingNull = [null];
+    const validationResult = validateSaleLineItems(lineItemsContainingNull);
+    expect(validationResult.isValid).toBe(false);
+    expect(validationResult.errorMessage).toMatch(/invalid line item/i);
+  });
+
+  test('returns isValid false when agreed unit price is NaN', () => {
+    const lineItemsWithNanPrice = [
+      { salvagePartId: 1, quantitySold: 1, agreedUnitPriceDollars: NaN },
+    ];
+    const validationResult = validateSaleLineItems(lineItemsWithNanPrice);
+    expect(validationResult.isValid).toBe(false);
+    expect(validationResult.errorMessage).toMatch(/unit price/i);
   });
 
   test('returns isValid false when a line item has an invalid salvage part ID', () => {

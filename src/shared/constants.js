@@ -19,7 +19,7 @@ const DEFAULT_TAX_RATE_LABEL = '8%';
 /** Condition grades used when cataloguing a salvage part. */
 const PART_CONDITION_OPTIONS = Object.freeze(['Excellent', 'Good', 'Fair', 'Poor', 'For Parts Only']);
 
-/** Sale status values stored in the `sales` database table. */
+/** Sale status values stored in the `sale_transactions` database table. */
 const SALE_STATUS = Object.freeze({
   PENDING: 'pending',
   COMPLETED: 'completed',

@@ -52,7 +52,8 @@ function handleGetAllCustomers(databaseConnection) {
  * @param {{ customerId: number }} payload
  * @returns {{ success: boolean, customerRecord?: Object, errorMessage?: string }}
  */
-function handleGetCustomerById(databaseConnection, _event, { customerId }) {
+function handleGetCustomerById(databaseConnection, _event, payload) {
+  const { customerId } = (payload && typeof payload === 'object') ? payload : {};
   if (!Number.isInteger(customerId) || customerId <= 0) {
     return { success: false, errorMessage: 'A valid customer ID is required.' };
   }
@@ -159,7 +160,8 @@ function handleUpdateCustomerContactInfo(databaseConnection, _event, updatedCust
  * @param {{ customerId: number }} payload
  * @returns {{ success: boolean, errorMessage?: string }}
  */
-function handleDeleteCustomer(databaseConnection, _event, { customerId }) {
+function handleDeleteCustomer(databaseConnection, _event, payload) {
+  const { customerId } = (payload && typeof payload === 'object') ? payload : {};
   if (!Number.isInteger(customerId) || customerId <= 0) {
     return { success: false, errorMessage: 'A valid customer ID is required to delete a record.' };
   }
@@ -196,7 +198,8 @@ function handleDeleteCustomer(databaseConnection, _event, { customerId }) {
  * @param {{ customerId: number }} payload
  * @returns {{ success: boolean, transactionHistoryList?: Object[], errorMessage?: string }}
  */
-function handleGetCustomerTransactionHistory(databaseConnection, _event, { customerId }) {
+function handleGetCustomerTransactionHistory(databaseConnection, _event, payload) {
+  const { customerId } = (payload && typeof payload === 'object') ? payload : {};
   if (!Number.isInteger(customerId) || customerId <= 0) {
     return { success: false, errorMessage: 'A valid customer ID is required.' };
   }

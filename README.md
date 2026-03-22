@@ -63,9 +63,12 @@ SamsJunkPro/
 │   │       ├── customer-handlers.js
 │   │       └── sales-handlers.js
 │   ├── renderer/               # Electron renderer process (UI)
-│   │   ├── index.html
+│   │   ├── index.html          # Main application shell
+│   │   ├── preload.js          # Exposes window.api via contextBridge
 │   │   ├── styles/
-│   │   └── pages/
+│   │   │   └── main.css
+│   │   └── pages/              # Page-level JS modules
+│   │       ├── navigation.js
 │   │       ├── inventory.js
 │   │       ├── customers.js
 │   │       └── sales.js
@@ -73,9 +76,8 @@ SamsJunkPro/
 │       ├── constants.js
 │       └── validation.js
 ├── tests/                      # Jest unit and integration tests
-├── assets/                     # Icons, images
+├── LICENSE
 ├── package.json
-├── electron-builder.yml
 ├── CONTRIBUTING.md
 └── README.md
 ```

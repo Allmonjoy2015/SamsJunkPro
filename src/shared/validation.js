@@ -22,6 +22,10 @@ const { PART_CONDITION_OPTIONS } = require('./constants');
  * @returns {{ isValid: boolean, errorMessage: string | null }}
  */
 function validateSalvagePartData(salvagePartData) {
+  if (!salvagePartData || typeof salvagePartData !== 'object' || Array.isArray(salvagePartData)) {
+    return { isValid: false, errorMessage: 'Invalid salvage part payload: expected an object.' };
+  }
+
   const { partName, vehicleMake, vehicleModel, vehicleYear, partCondition, askingPriceDollars } =
     salvagePartData;
 
@@ -56,7 +60,7 @@ function validateSalvagePartData(salvagePartData) {
     };
   }
 
-  if (typeof askingPriceDollars !== 'number' || askingPriceDollars < 0) {
+  if (!Number.isFinite(askingPriceDollars) || askingPriceDollars < 0) {
     return { isValid: false, errorMessage: 'Asking price must be a non-negative number.' };
   }
 
@@ -84,15 +88,18 @@ function validateCustomerData(customerData) {
   const { customerFirstName, customerLastName, customerPhoneNumber, customerEmailAddress } =
     customerData;
 
-  if (!customerFirstName || customerFirstName.trim().length === 0) {
+  if (!customerFirstName || typeof customerFirstName !== 'string' || customerFirstName.trim().length === 0) {
     return { isValid: false, errorMessage: 'Customer first name is required.' };
   }
 
-  if (!customerLastName || customerLastName.trim().length === 0) {
+  if (!customerLastName || typeof customerLastName !== 'string' || customerLastName.trim().length === 0) {
     return { isValid: false, errorMessage: 'Customer last name is required.' };
   }
 
-  if (customerPhoneNumber) {
+  if (customerPhoneNumber !== undefined && customerPhoneNumber !== null) {
+    if (typeof customerPhoneNumber !== 'string') {
+      return { isValid: false, errorMessage: 'Phone number must be a string.' };
+    }
     const digitsOnlyPhoneNumber = customerPhoneNumber.replace(/\D/g, '');
     if (digitsOnlyPhoneNumber.length < 10) {
       return {
@@ -102,7 +109,10 @@ function validateCustomerData(customerData) {
     }
   }
 
-  if (customerEmailAddress) {
+  if (customerEmailAddress !== undefined && customerEmailAddress !== null) {
+    if (typeof customerEmailAddress !== 'string') {
+      return { isValid: false, errorMessage: 'Email address must be a string.' };
+    }
     const emailFormatRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailFormatRegex.test(customerEmailAddress)) {
       return { isValid: false, errorMessage: 'Email address format is invalid.' };
@@ -125,6 +135,13 @@ function validateSaleLineItems(saleLineItemList) {
 
   for (let lineItemIndex = 0; lineItemIndex < saleLineItemList.length; lineItemIndex++) {
     const saleLineItem = saleLineItemList[lineItemIndex];
+
+    if (!saleLineItem || typeof saleLineItem !== 'object') {
+      return {
+        isValid: false,
+        errorMessage: `Line item ${lineItemIndex + 1}: invalid line item object.`,
+      };
+    }
 
     if (!Number.isInteger(saleLineItem.salvagePartId) || saleLineItem.salvagePartId <= 0) {
       return {

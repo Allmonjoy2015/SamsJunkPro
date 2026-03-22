@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!--
+    Content-Security-Policy:
+    - default-src 'self'  — only allow resources from this app's origin
+    - script-src 'self'   — no inline scripts or external sources
+    - style-src 'self' 'unsafe-inline' — allow local stylesheets + minimal inline styles
+  -->
+  <meta
+    http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';"
+  />
+  <title>Sam's Junk Pro</title>
+  <link rel="stylesheet" href="styles/main.css" />
+</head>
+<body>
+  <header class="application-header">
+    <h1 class="application-title">Sam's Junk Pro</h1>
+    <nav class="primary-navigation" aria-label="Primary navigation">
+      <button
+        class="navigation-tab-button active"
+        data-target-page="inventory-page"
+        aria-current="page"
+      >
+        Inventory
+      </button>
+      <button
+        class="navigation-tab-button"
+        data-target-page="customers-page"
+      >
+        Customers
+      </button>
+      <button
+        class="navigation-tab-button"
+        data-target-page="sales-page"
+      >
+        Sales
+      </button>
+    </nav>
+  </header>
+
+  <main class="application-content">
+    <!-- Inventory page -->
+    <section id="inventory-page" class="page-section" aria-label="Inventory">
+      <h2>Inventory</h2>
+      <div class="toolbar">
+        <input
+          id="inventory-search-input"
+          type="search"
+          placeholder="Search parts by name, make, model or part number…"
+          aria-label="Search salvage parts"
+        />
+        <button id="add-part-button">+ Add Part</button>
+      </div>
+      <div id="inventory-results-container" aria-live="polite">
+        <p class="empty-state-message">Enter a search term above to find salvage parts.</p>
+      </div>
+    </section>
+
+    <!-- Customers page (hidden by default) -->
+    <section id="customers-page" class="page-section hidden" aria-label="Customers">
+      <h2>Customers</h2>
+      <div class="toolbar">
+        <button id="add-customer-button">+ New Customer</button>
+      </div>
+      <div id="customer-list-container" aria-live="polite">
+        <p class="empty-state-message">Loading customers…</p>
+      </div>
+    </section>
+
+    <!-- Sales page (hidden by default) -->
+    <section id="sales-page" class="page-section hidden" aria-label="Sales">
+      <h2>New Sale</h2>
+      <div id="sale-form-container">
+        <p class="empty-state-message">Select parts from Inventory to add them to a sale.</p>
+      </div>
+    </section>
+  </main>
+
+  <script src="pages/navigation.js"></script>
+  <script src="pages/inventory.js"></script>
+  <script src="pages/customers.js"></script>
+  <script src="pages/sales.js"></script>
+</body>
+</html>

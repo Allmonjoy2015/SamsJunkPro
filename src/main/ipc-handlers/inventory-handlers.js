@@ -123,21 +123,23 @@ function handleUpdateSalvagePart(databaseConnection, _event, updatedPartData) {
 }
 
 /**
- * Marks a salvage part as deleted (soft-delete: sets is_sold = 1).
+ * Removes a salvage part from active inventory (soft-delete: sets is_removed = 1).
  * Hard deletion is avoided to preserve sale history integrity.
+ * This is distinct from `is_sold`, which marks parts sold via a sale transaction.
  *
  * @param {import('better-sqlite3').Database} databaseConnection
  * @param {Electron.IpcMainInvokeEvent} _event
- * @param {{ partId: number }} payload
+ * @param {{ partId: number } | null | undefined} payload
  * @returns {{ success: boolean, errorMessage?: string }}
  */
-function handleDeleteSalvagePart(databaseConnection, _event, { partId }) {
+function handleDeleteSalvagePart(databaseConnection, _event, payload) {
+  const { partId } = (payload && typeof payload === 'object') ? payload : {};
   if (!Number.isInteger(partId) || partId <= 0) {
     return { success: false, errorMessage: 'A valid part ID is required to delete a record.' };
   }
 
   const markPartAsRemovedStatement = databaseConnection.prepare(
-    `UPDATE salvage_parts SET is_sold = 1 WHERE part_id = ?`
+    `UPDATE salvage_parts SET is_removed = 1 WHERE part_id = ?`
   );
 
   const updateResult = markPartAsRemovedStatement.run(partId);
@@ -157,7 +159,8 @@ function handleDeleteSalvagePart(databaseConnection, _event, { partId }) {
  * @param {{ partId: number }} payload
  * @returns {{ success: boolean, salvagePart?: Object, errorMessage?: string }}
  */
-function handleGetSalvagePartById(databaseConnection, _event, { partId }) {
+function handleGetSalvagePartById(databaseConnection, _event, payload) {
+  const { partId } = (payload && typeof payload === 'object') ? payload : {};
   if (!Number.isInteger(partId) || partId <= 0) {
     return { success: false, errorMessage: 'A valid part ID is required.' };
   }
@@ -184,8 +187,12 @@ function handleGetSalvagePartById(databaseConnection, _event, { partId }) {
  * @param {{ searchKeyword: string, includeAlreadySoldParts?: boolean }} searchOptions
  * @returns {{ success: boolean, salvagePartList?: Object[], errorMessage?: string }}
  */
-function handleSearchSalvageParts(databaseConnection, _event, searchOptions) {
+function handleSearchSalvageParts(databaseConnection, _event, searchOptions = {}) {
   const { searchKeyword = '', includeAlreadySoldParts = false } = searchOptions;
+
+  if (typeof searchKeyword !== 'string') {
+    return { success: false, errorMessage: 'A valid search keyword string is required.' };
+  }
 
   const searchPattern = `%${searchKeyword.trim()}%`;
   const soldFilterClause = includeAlreadySoldParts ? '' : 'AND is_sold = 0';
@@ -198,6 +205,7 @@ function handleSearchSalvageParts(databaseConnection, _event, searchOptions) {
       vehicle_model LIKE @searchPattern OR
       part_number  LIKE @searchPattern
     )
+    AND is_removed = 0
     ${soldFilterClause}
     ORDER BY date_added DESC
     LIMIT @maxResults
