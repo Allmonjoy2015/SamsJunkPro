@@ -28,7 +28,11 @@ function registerHandler(channelName, handlerFn) {
       return { success: true, data };
     } catch (err) {
       console.error(`IPC handler error on channel "${channelName}":`, err);
-      return { success: false, error: err.message };
+      const message =
+        err instanceof Error
+          ? err.message
+          : String(err || 'Unknown error');
+      return { success: false, error: message };
     }
   });
 }
