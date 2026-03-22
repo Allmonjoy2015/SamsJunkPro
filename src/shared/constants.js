@@ -55,6 +55,16 @@ const IPC_CHANNELS = Object.freeze({
   REPORTS_GET_SALES_SUMMARY: 'reports:getSalesSummary',
   REPORTS_EXPORT_PDF: 'reports:exportPdf',
   REPORTS_EXPORT_CSV: 'reports:exportCsv',
+
+  // Daily-log channels (one record per operational day, for regulatory compliance)
+  DAILY_LOGS_ADD: 'dailyLogs:add',
+  DAILY_LOGS_GET_BY_DATE: 'dailyLogs:getByDate',
+  DAILY_LOGS_GET_RANGE: 'dailyLogs:getRange',
+
+  // Compliance-log channels (police / confiscation events)
+  COMPLIANCE_LOG_ADD: 'complianceLog:add',
+  COMPLIANCE_LOG_GET_ALL: 'complianceLog:getAll',
+  COMPLIANCE_LOG_GET_BY_DATE: 'complianceLog:getByDate',
 });
 
 module.exports = {

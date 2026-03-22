@@ -18,6 +18,7 @@ const { openDatabase } = require('./database');
 const { registerInventoryIpcHandlers } = require('./ipc-handlers/inventory-handlers');
 const { registerCustomerIpcHandlers } = require('./ipc-handlers/customer-handlers');
 const { registerSalesIpcHandlers } = require('./ipc-handlers/sales-handlers');
+const { registerComplianceIpcHandlers } = require('./ipc-handlers/compliance-handlers');
 
 /** @type {BrowserWindow | null} Reference to the main application window. */
 let mainApplicationWindow = null;
@@ -61,6 +62,7 @@ app.whenReady().then(() => {
   registerInventoryIpcHandlers(ipcMain, databaseConnection);
   registerCustomerIpcHandlers(ipcMain, databaseConnection);
   registerSalesIpcHandlers(ipcMain, databaseConnection);
+  registerComplianceIpcHandlers(ipcMain, databaseConnection);
 
   createMainApplicationWindow();
 
