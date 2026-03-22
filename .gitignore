@@ -1,0 +1,7 @@
+node_modules/
+samsjunkpro.db
+*.db-shm
+*.db-wal
+dist/
+out/
+.DS_Store

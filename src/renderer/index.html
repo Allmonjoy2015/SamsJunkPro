@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sam's Junk Pro</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- ── Sidebar ─────────────────────────────────────────── -->
+  <aside class="sidebar">
+    <div class="sidebar__brand">
+      <span>♻️</span> Sam's Junk Pro
+    </div>
+    <nav class="sidebar__nav">
+      <div class="nav-item active" data-view="dashboard">
+        <span class="nav-item__icon">📊</span> Dashboard
+      </div>
+      <div class="nav-item" data-view="customers">
+        <span class="nav-item__icon">👥</span> Customers
+      </div>
+      <div class="nav-item" data-view="inventory">
+        <span class="nav-item__icon">📦</span> Inventory
+      </div>
+      <div class="nav-item" data-view="transactions">
+        <span class="nav-item__icon">💰</span> Transactions
+      </div>
+    </nav>
+  </aside>
+
+  <!-- ── Main content ─────────────────────────────────────── -->
+  <div class="main-content">
+    <header class="topbar">
+      <span class="topbar__title" id="topbar-title">Dashboard</span>
+      <span class="topbar__date" id="topbar-date"></span>
+    </header>
+
+    <main class="page-body">
+
+      <!-- ── Dashboard view ─────────────────────────────── -->
+      <section class="view active" id="view-dashboard">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-card__icon">👥</div>
+            <div class="stat-card__value" id="stat-customers">–</div>
+            <div class="stat-card__label">Total Customers</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card__icon">📦</div>
+            <div class="stat-card__value" id="stat-inventory">–</div>
+            <div class="stat-card__label">Inventory Items</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card__icon">🔄</div>
+            <div class="stat-card__value" id="stat-transactions">–</div>
+            <div class="stat-card__label">Transactions</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card__icon">💵</div>
+            <div class="stat-card__value" id="stat-revenue">–</div>
+            <div class="stat-card__label">Total Sales Revenue</div>
+          </div>
+        </div>
+
+        <div class="section-header"><h2>Recent Transactions</h2></div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Type</th>
+                <th>Customer</th>
+                <th>Material</th>
+                <th>Weight (lbs)</th>
+                <th>Price/lb</th>
+                <th>Total</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody id="dashboard-tx-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ── Customers view ─────────────────────────────── -->
+      <section class="view" id="view-customers">
+        <div class="section-header">
+          <h2>Customer Database</h2>
+          <button class="btn btn--primary" id="btn-add-customer">+ Add Customer</button>
+        </div>
+        <div class="search-bar">
+          <input type="text" id="customer-search" placeholder="Search by name, phone, or email…" />
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Phone</th>
+                <th>Email</th>
+                <th>Address</th>
+                <th>Added</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="customers-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ── Inventory view ─────────────────────────────── -->
+      <section class="view" id="view-inventory">
+        <div class="section-header">
+          <h2>Scrap Inventory</h2>
+          <button class="btn btn--primary" id="btn-add-inventory">+ Add Item</button>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Material</th>
+                <th>Weight (lbs)</th>
+                <th>Price/lb</th>
+                <th>Value</th>
+                <th>Location</th>
+                <th>Notes</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="inventory-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ── Transactions view ───────────────────────────── -->
+      <section class="view" id="view-transactions">
+        <div class="section-header">
+          <h2>Transactions</h2>
+          <button class="btn btn--primary" id="btn-add-transaction">+ New Transaction</button>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Type</th>
+                <th>Customer</th>
+                <th>Material</th>
+                <th>Weight (lbs)</th>
+                <th>Price/lb</th>
+                <th>Total</th>
+                <th>Notes</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody id="transactions-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<!-- ── Toast container ──────────────────────────────────── -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- ── Customer modal ───────────────────────────────────── -->
+<div class="modal-overlay hidden" id="customer-modal-overlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="customer-modal-title">
+    <div class="modal__header">
+      <span class="modal__title" id="customer-modal-title">Add Customer</span>
+      <button class="modal__close" data-close="customer-modal-overlay">✕</button>
+    </div>
+    <form id="customer-form" novalidate>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="cf-first-name">First Name *</label>
+          <input type="text" id="cf-first-name" name="first_name" required />
+        </div>
+        <div class="form-group">
+          <label for="cf-last-name">Last Name *</label>
+          <input type="text" id="cf-last-name" name="last_name" required />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="cf-phone">Phone</label>
+          <input type="tel" id="cf-phone" name="phone" />
+        </div>
+        <div class="form-group">
+          <label for="cf-email">Email</label>
+          <input type="email" id="cf-email" name="email" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="cf-address">Address</label>
+        <input type="text" id="cf-address" name="address" />
+      </div>
+      <div class="form-group">
+        <label for="cf-notes">Notes</label>
+        <textarea id="cf-notes" name="notes"></textarea>
+      </div>
+      <div class="modal__actions">
+        <button type="button" class="btn btn--ghost" data-close="customer-modal-overlay">Cancel</button>
+        <button type="submit" class="btn btn--primary" id="customer-form-submit">Save Customer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ── Inventory modal ──────────────────────────────────── -->
+<div class="modal-overlay hidden" id="inventory-modal-overlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="inventory-modal-title">
+    <div class="modal__header">
+      <span class="modal__title" id="inventory-modal-title">Add Inventory Item</span>
+      <button class="modal__close" data-close="inventory-modal-overlay">✕</button>
+    </div>
+    <form id="inventory-form" novalidate>
+      <div class="form-group">
+        <label for="if-material">Material *</label>
+        <input type="text" id="if-material" name="material" placeholder="e.g. Copper, Steel, Aluminum" required />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="if-weight">Weight (lbs) *</label>
+          <input type="number" id="if-weight" name="weight_lbs" min="0" step="0.01" required />
+        </div>
+        <div class="form-group">
+          <label for="if-price">Price per lb ($) *</label>
+          <input type="number" id="if-price" name="price_per_lb" min="0" step="0.01" required />
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="if-location">Location</label>
+        <input type="text" id="if-location" name="location" placeholder="e.g. Yard A, Section 3" />
+      </div>
+      <div class="form-group">
+        <label for="if-notes">Notes</label>
+        <textarea id="if-notes" name="notes"></textarea>
+      </div>
+      <div class="modal__actions">
+        <button type="button" class="btn btn--ghost" data-close="inventory-modal-overlay">Cancel</button>
+        <button type="submit" class="btn btn--primary" id="inventory-form-submit">Save Item</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ── Transaction modal ────────────────────────────────── -->
+<div class="modal-overlay hidden" id="transaction-modal-overlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="transaction-modal-title">
+    <div class="modal__header">
+      <span class="modal__title" id="transaction-modal-title">New Transaction</span>
+      <button class="modal__close" data-close="transaction-modal-overlay">✕</button>
+    </div>
+    <form id="transaction-form" novalidate>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="tf-type">Type *</label>
+          <select id="tf-type" name="type" required>
+            <option value="buy">Buy (purchase scrap)</option>
+            <option value="sell">Sell (sell scrap)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="tf-customer">Customer</label>
+          <select id="tf-customer" name="customer_id">
+            <option value="">— Walk-in / No customer —</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="tf-material">Material *</label>
+        <input type="text" id="tf-material" name="material" placeholder="e.g. Copper wire" required />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="tf-weight">Weight (lbs) *</label>
+          <input type="number" id="tf-weight" name="weight_lbs" min="0" step="0.01" required />
+        </div>
+        <div class="form-group">
+          <label for="tf-price">Price per lb ($) *</label>
+          <input type="number" id="tf-price" name="price_per_lb" min="0" step="0.01" required />
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="tf-notes">Notes</label>
+        <textarea id="tf-notes" name="notes"></textarea>
+      </div>
+      <div class="modal__actions">
+        <button type="button" class="btn btn--ghost" data-close="transaction-modal-overlay">Cancel</button>
+        <button type="submit" class="btn btn--primary">Record Transaction</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="renderer.js"></script>
+</body>
+</html>
