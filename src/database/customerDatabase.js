@@ -68,7 +68,71 @@ function createSchema(db) {
       notes          TEXT,
       created_at     TEXT    NOT NULL DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS inventory (
+      id               INTEGER PRIMARY KEY AUTOINCREMENT,
+      item_type        TEXT    NOT NULL,
+      description      TEXT,
+      weight           REAL,
+      unit_price       REAL,
+      total_value      REAL,
+      supplier_name    TEXT,
+      supplier_address TEXT,
+      supplier_phone   TEXT,
+      purchase_date    TEXT,
+      ticket_number    TEXT    UNIQUE,
+      material_type    TEXT,
+      photo_path       TEXT,
+      notes            TEXT,
+      created_at       TEXT    NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS sales (
+      id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+      inventory_id       INTEGER REFERENCES inventory(id),
+      customer_name      TEXT    NOT NULL,
+      customer_address   TEXT,
+      customer_phone     TEXT,
+      customer_id_type   TEXT,
+      customer_id_number TEXT,
+      vehicle_info       TEXT,
+      license_plate      TEXT,
+      sale_date          TEXT,
+      total_weight       REAL,
+      total_amount       REAL,
+      payment_method     TEXT,
+      ticket_number      TEXT    UNIQUE,
+      created_at         TEXT    NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS compliance_logs (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      log_type    TEXT,
+      description TEXT,
+      date        TEXT,
+      reported_to TEXT,
+      created_at  TEXT    NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS settings (
+      key   TEXT PRIMARY KEY,
+      value TEXT
+    );
   `);
+
+  // Insert default business settings if they do not already exist
+  const insertDefaultSetting = db.prepare(
+    'INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)'
+  );
+  const defaults = [
+    ['business_name', 'Your Scrapyard Name'],
+    ['business_address', 'Your Address'],
+    ['business_phone', 'Your Phone'],
+    ['business_license', 'Your License Number'],
+  ];
+  for (const [key, value] of defaults) {
+    insertDefaultSetting.run(key, value);
+  }
 }
 
 // ─── Customer operations ──────────────────────────────────────────────────────
@@ -369,6 +433,244 @@ function getDashboardStats(db) {
   };
 }
 
+// ─── Inventory (supplier purchase records) ────────────────────────────────────
+
+/**
+ * Inserts a new inventory record (item purchased from a supplier).
+ *
+ * @param {Database.Database} db
+ * @param {{ item_type: string, description?: string, weight?: number,
+ *           unit_price?: number, total_value?: number, supplier_name?: string,
+ *           supplier_address?: string, supplier_phone?: string,
+ *           purchase_date?: string, ticket_number?: string,
+ *           material_type?: string, photo_path?: string,
+ *           notes?: string }} item
+ * @returns {{ id: number, changes: number }}
+ */
+function addInventory(db, item) {
+  const stmt = db.prepare(`
+    INSERT INTO inventory
+      (item_type, description, weight, unit_price, total_value, supplier_name,
+       supplier_address, supplier_phone, purchase_date, ticket_number,
+       material_type, photo_path, notes)
+    VALUES
+      (@item_type, @description, @weight, @unit_price, @total_value,
+       @supplier_name, @supplier_address, @supplier_phone, @purchase_date,
+       @ticket_number, @material_type, @photo_path, @notes)
+  `);
+  const result = stmt.run({
+    item_type: item.item_type,
+    description: item.description || null,
+    weight: item.weight || null,
+    unit_price: item.unit_price || null,
+    total_value: item.total_value || null,
+    supplier_name: item.supplier_name || null,
+    supplier_address: item.supplier_address || null,
+    supplier_phone: item.supplier_phone || null,
+    purchase_date: item.purchase_date || null,
+    ticket_number: item.ticket_number || null,
+    material_type: item.material_type || null,
+    photo_path: item.photo_path || null,
+    notes: item.notes || null,
+  });
+  return { id: result.lastInsertRowid, changes: result.changes };
+}
+
+/**
+ * Returns all inventory records ordered by purchase date descending.
+ *
+ * @param {Database.Database} db
+ * @returns {object[]}
+ */
+function getInventory(db) {
+  return db
+    .prepare('SELECT * FROM inventory ORDER BY purchase_date DESC, created_at DESC')
+    .all();
+}
+
+// ─── Sales ────────────────────────────────────────────────────────────────────
+
+/**
+ * Records a new sale transaction with embedded customer and vehicle details.
+ *
+ * @param {Database.Database} db
+ * @param {{ inventory_id?: number, customer_name: string,
+ *           customer_address?: string, customer_phone?: string,
+ *           customer_id_type?: string, customer_id_number?: string,
+ *           vehicle_info?: string, license_plate?: string,
+ *           sale_date?: string, total_weight?: number, total_amount?: number,
+ *           payment_method?: string, ticket_number?: string }} sale
+ * @returns {{ id: number, changes: number }}
+ */
+function addSale(db, sale) {
+  const stmt = db.prepare(`
+    INSERT INTO sales
+      (inventory_id, customer_name, customer_address, customer_phone,
+       customer_id_type, customer_id_number, vehicle_info, license_plate,
+       sale_date, total_weight, total_amount, payment_method, ticket_number)
+    VALUES
+      (@inventory_id, @customer_name, @customer_address, @customer_phone,
+       @customer_id_type, @customer_id_number, @vehicle_info, @license_plate,
+       @sale_date, @total_weight, @total_amount, @payment_method, @ticket_number)
+  `);
+  const result = stmt.run({
+    inventory_id: sale.inventory_id || null,
+    customer_name: sale.customer_name,
+    customer_address: sale.customer_address || null,
+    customer_phone: sale.customer_phone || null,
+    customer_id_type: sale.customer_id_type || null,
+    customer_id_number: sale.customer_id_number || null,
+    vehicle_info: sale.vehicle_info || null,
+    license_plate: sale.license_plate || null,
+    sale_date: sale.sale_date || null,
+    total_weight: sale.total_weight || null,
+    total_amount: sale.total_amount || null,
+    payment_method: sale.payment_method || null,
+    ticket_number: sale.ticket_number || null,
+  });
+  return { id: result.lastInsertRowid, changes: result.changes };
+}
+
+/**
+ * Returns all sales joined with the linked inventory item description,
+ * ordered by sale date descending.
+ *
+ * @param {Database.Database} db
+ * @returns {object[]}
+ */
+function getSales(db) {
+  return db
+    .prepare(`
+      SELECT s.*, i.description AS item_description
+      FROM   sales s
+      LEFT   JOIN inventory i ON i.id = s.inventory_id
+      ORDER  BY s.sale_date DESC, s.created_at DESC
+    `)
+    .all();
+}
+
+/**
+ * Returns aggregate compliance statistics for a date range.
+ *
+ * @param {Database.Database} db
+ * @param {string} startDate - ISO date string (inclusive).
+ * @param {string} endDate   - ISO date string (inclusive).
+ * @returns {{ total_transactions: number, total_sales: number,
+ *             total_weight: number, unique_customers: number }}
+ */
+function getComplianceReport(db, startDate, endDate) {
+  return db
+    .prepare(`
+      SELECT
+        COUNT(*)                      AS total_transactions,
+        COALESCE(SUM(total_amount), 0) AS total_sales,
+        COALESCE(SUM(total_weight), 0) AS total_weight,
+        COUNT(DISTINCT customer_name)  AS unique_customers
+      FROM sales
+      WHERE sale_date BETWEEN ? AND ?
+    `)
+    .get(startDate, endDate);
+}
+
+/**
+ * Deletes sales and inventory records older than three years.
+ *
+ * @param {Database.Database} db
+ * @returns {{ salesDeleted: number, inventoryDeleted: number }}
+ */
+function cleanupOldRecords(db) {
+  const threeYearsAgo = new Date();
+  threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
+  const cutoff = threeYearsAgo.toISOString().split('T')[0];
+
+  const salesResult = db
+    .prepare('DELETE FROM sales WHERE sale_date < ?')
+    .run(cutoff);
+  const inventoryResult = db
+    .prepare('DELETE FROM inventory WHERE purchase_date < ?')
+    .run(cutoff);
+
+  return {
+    salesDeleted: salesResult.changes,
+    inventoryDeleted: inventoryResult.changes,
+  };
+}
+
+// ─── Compliance logs ──────────────────────────────────────────────────────────
+
+/**
+ * Inserts a new compliance log entry.
+ *
+ * @param {Database.Database} db
+ * @param {{ log_type?: string, description?: string, date?: string,
+ *           reported_to?: string }} log
+ * @returns {{ id: number, changes: number }}
+ */
+function addComplianceLog(db, log) {
+  const stmt = db.prepare(`
+    INSERT INTO compliance_logs (log_type, description, date, reported_to)
+    VALUES (@log_type, @description, @date, @reported_to)
+  `);
+  const result = stmt.run({
+    log_type: log.log_type || null,
+    description: log.description || null,
+    date: log.date || null,
+    reported_to: log.reported_to || null,
+  });
+  return { id: result.lastInsertRowid, changes: result.changes };
+}
+
+/**
+ * Returns all compliance log entries ordered by date descending.
+ *
+ * @param {Database.Database} db
+ * @returns {object[]}
+ */
+function getComplianceLogs(db) {
+  return db
+    .prepare('SELECT * FROM compliance_logs ORDER BY date DESC, created_at DESC')
+    .all();
+}
+
+// ─── Settings ─────────────────────────────────────────────────────────────────
+
+/**
+ * Returns the value for a given settings key, or undefined if not found.
+ *
+ * @param {Database.Database} db
+ * @param {string} key
+ * @returns {string|undefined}
+ */
+function getSetting(db, key) {
+  const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key);
+  return row ? row.value : undefined;
+}
+
+/**
+ * Inserts or replaces a setting value.
+ *
+ * @param {Database.Database} db
+ * @param {string} key
+ * @param {string} value
+ * @returns {{ changes: number }}
+ */
+function setSetting(db, key, value) {
+  const result = db
+    .prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)')
+    .run(key, value);
+  return { changes: result.changes };
+}
+
+/**
+ * Returns all settings as an array of { key, value } objects.
+ *
+ * @param {Database.Database} db
+ * @returns {{ key: string, value: string }[]}
+ */
+function getAllSettings(db) {
+  return db.prepare('SELECT key, value FROM settings ORDER BY key').all();
+}
+
 module.exports = {
   openDatabase,
   createSchema,
@@ -379,15 +681,30 @@ module.exports = {
   searchCustomers,
   updateCustomer,
   deleteCustomer,
-  // inventory
+  // scrap_inventory (legacy)
   addInventoryItem,
   getAllInventory,
   updateInventoryItem,
   deleteInventoryItem,
-  // transactions
+  // transactions (legacy)
   addTransaction,
   getAllTransactions,
   getTransactionsByCustomer,
   // dashboard
   getDashboardStats,
+  // inventory (supplier purchase records)
+  addInventory,
+  getInventory,
+  // sales
+  addSale,
+  getSales,
+  getComplianceReport,
+  cleanupOldRecords,
+  // compliance logs
+  addComplianceLog,
+  getComplianceLogs,
+  // settings
+  getSetting,
+  setSetting,
+  getAllSettings,
 };

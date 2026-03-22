@@ -98,6 +98,54 @@ function registerAllHandlers(database) {
   registerHandler('db:addTransaction', (_event, txData) =>
     db.addTransaction(database, txData)
   );
+
+  // ── Inventory (supplier purchase records) ──────────────────────────────────
+  registerHandler('db:addInventory', (_event, item) =>
+    db.addInventory(database, item)
+  );
+
+  registerHandler('db:getInventory', () =>
+    db.getInventory(database)
+  );
+
+  // ── Sales ──────────────────────────────────────────────────────────────────
+  registerHandler('db:addSale', (_event, sale) =>
+    db.addSale(database, sale)
+  );
+
+  registerHandler('db:getSales', () =>
+    db.getSales(database)
+  );
+
+  registerHandler('db:getComplianceReport', (_event, startDate, endDate) =>
+    db.getComplianceReport(database, startDate, endDate)
+  );
+
+  registerHandler('db:cleanupOldRecords', () =>
+    db.cleanupOldRecords(database)
+  );
+
+  // ── Compliance logs ────────────────────────────────────────────────────────
+  registerHandler('db:addComplianceLog', (_event, log) =>
+    db.addComplianceLog(database, log)
+  );
+
+  registerHandler('db:getComplianceLogs', () =>
+    db.getComplianceLogs(database)
+  );
+
+  // ── Settings ───────────────────────────────────────────────────────────────
+  registerHandler('db:getSetting', (_event, key) =>
+    db.getSetting(database, key)
+  );
+
+  registerHandler('db:setSetting', (_event, key, value) =>
+    db.setSetting(database, key, value)
+  );
+
+  registerHandler('db:getAllSettings', () =>
+    db.getAllSettings(database)
+  );
 }
 
 module.exports = { registerAllHandlers };
