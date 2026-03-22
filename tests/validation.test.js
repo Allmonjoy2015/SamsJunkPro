@@ -142,6 +142,24 @@ describe('validateCustomerData', () => {
     expect(validationResult.isValid).toBe(false);
     expect(validationResult.errorMessage).toMatch(/email/i);
   });
+
+  test('returns isValid false when customerData is null', () => {
+    const validationResult = validateCustomerData(null);
+    expect(validationResult.isValid).toBe(false);
+    expect(validationResult.errorMessage).toMatch(/invalid customer data/i);
+  });
+
+  test('returns isValid false when customerData is an array instead of an object', () => {
+    const validationResult = validateCustomerData(['Jane', 'Smith']);
+    expect(validationResult.isValid).toBe(false);
+    expect(validationResult.errorMessage).toMatch(/invalid customer data/i);
+  });
+
+  test('returns isValid false when customerData is a primitive (string)', () => {
+    const validationResult = validateCustomerData('Jane Smith');
+    expect(validationResult.isValid).toBe(false);
+    expect(validationResult.errorMessage).toMatch(/invalid customer data/i);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -200,5 +218,14 @@ describe('validateSaleLineItems', () => {
     ];
     const validationResult = validateSaleLineItems(lineItemsWithZeroPrice);
     expect(validationResult.isValid).toBe(true);
+  });
+
+  test('returns isValid false when agreed unit price is Infinity', () => {
+    const lineItemsWithInfinitePrice = [
+      { salvagePartId: 1, quantitySold: 1, agreedUnitPriceDollars: Infinity },
+    ];
+    const validationResult = validateSaleLineItems(lineItemsWithInfinitePrice);
+    expect(validationResult.isValid).toBe(false);
+    expect(validationResult.errorMessage).toMatch(/unit price/i);
   });
 });
