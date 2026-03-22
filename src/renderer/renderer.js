@@ -143,44 +143,66 @@ document.querySelectorAll('.modal-overlay').forEach((overlay) => {
 // ── Dashboard ──────────────────────────────────────────────────────────────────
 
 async function loadDashboard() {
-  const [statsRes, txRes] = await Promise.all([
-    window.api.getDashboardStats(),
-    window.api.getAllTransactions(),
-  ]);
-
-  if (statsRes.success) {
-    const s = statsRes.data;
-    document.getElementById('stat-customers').textContent = s.totalCustomers;
-    document.getElementById('stat-inventory').textContent = s.totalInventoryItems;
-    document.getElementById('stat-transactions').textContent = s.totalTransactions;
-    document.getElementById('stat-revenue').textContent = formatCurrency(s.totalRevenue);
-  }
-
   const tbody = document.getElementById('dashboard-tx-tbody');
-  if (txRes.success && txRes.data.length > 0) {
-    const recent = txRes.data.slice(0, 10);
-    tbody.innerHTML = recent.map((tx) => `
-      <tr>
-        <td>${escapeHtml(tx.id)}</td>
-        <td><span class="badge badge--${tx.type}">${tx.type}</span></td>
-        <td>${escapeHtml(tx.customer_name)}</td>
-        <td>${escapeHtml(tx.material)}</td>
-        <td>${escapeHtml(tx.weight_lbs)}</td>
-        <td>${escapeHtml(tx.price_per_lb)}</td>
-        <td>${formatCurrency(tx.total_amount)}</td>
-        <td>${formatDate(tx.created_at)}</td>
-      </tr>
-    `).join('');
-  } else {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="8">
-          <div class="empty-state">
-            <div class="empty-state__icon">💰</div>
-            No transactions yet.
-          </div>
-        </td>
-      </tr>`;
+
+  try {
+    const [statsRes, txRes] = await Promise.all([
+      window.api.getDashboardStats(),
+      window.api.getAllTransactions(),
+    ]);
+
+    if (statsRes && statsRes.success) {
+      const s = statsRes.data;
+      document.getElementById('stat-customers').textContent = s.totalCustomers;
+      document.getElementById('stat-inventory').textContent = s.totalInventoryItems;
+      document.getElementById('stat-transactions').textContent = s.totalTransactions;
+      document.getElementById('stat-revenue').textContent = formatCurrency(s.totalRevenue);
+    }
+
+    if (tbody) {
+      if (txRes && txRes.success && txRes.data.length > 0) {
+        const recent = txRes.data.slice(0, 10);
+        tbody.innerHTML = recent.map((tx) => `
+          <tr>
+            <td>${escapeHtml(tx.id)}</td>
+            <td><span class="badge badge--${tx.type}">${tx.type}</span></td>
+            <td>${escapeHtml(tx.customer_name)}</td>
+            <td>${escapeHtml(tx.material)}</td>
+            <td>${escapeHtml(tx.weight_lbs)}</td>
+            <td>${escapeHtml(tx.price_per_lb)}</td>
+            <td>${formatCurrency(tx.total_amount)}</td>
+            <td>${formatDate(tx.created_at)}</td>
+          </tr>
+        `).join('');
+      } else {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8">
+              <div class="empty-state">
+                <div class="empty-state__icon">💰</div>
+                No transactions yet.
+              </div>
+            </td>
+          </tr>`;
+      }
+    }
+  } catch (error) {
+    console.error('Failed to load dashboard data:', error);
+
+    if (tbody) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="8">
+            <div class="empty-state">
+              <div class="empty-state__icon">⚠️</div>
+              Error loading dashboard data. Please try again.
+            </div>
+          </td>
+        </tr>`;
+    }
+
+    // Simple error notification; replace with a proper toast if available elsewhere.
+    alert('An error occurred while loading the dashboard. Please try again.');
   }
 }
 
