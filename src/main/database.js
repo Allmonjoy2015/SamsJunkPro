@@ -39,12 +39,14 @@ function openDatabase() {
 }
 
 /**
- * Creates all required tables if they do not already exist.
- * This function is idempotent — safe to call on every app launch.
+ * Creates all required tables if they do not already exist and applies any
+ * incremental column migrations.  This function is idempotent — safe to call
+ * on every app launch.
  *
  * @param {import('better-sqlite3').Database} databaseConnection
  */
 function runSchemaMigration(databaseConnection) {
+  // Core tables ---------------------------------------------------------------
   databaseConnection.exec(`
     CREATE TABLE IF NOT EXISTS salvage_parts (
       part_id             INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -61,12 +63,22 @@ function runSchemaMigration(databaseConnection) {
     );
 
     CREATE TABLE IF NOT EXISTS customers (
-      customer_id           INTEGER PRIMARY KEY AUTOINCREMENT,
-      customer_first_name   TEXT NOT NULL,
-      customer_last_name    TEXT NOT NULL,
-      customer_phone_number TEXT,
-      customer_email_address TEXT,
-      date_added            TEXT NOT NULL DEFAULT (datetime('now'))
+      customer_id             INTEGER PRIMARY KEY AUTOINCREMENT,
+      customer_first_name     TEXT NOT NULL,
+      customer_last_name      TEXT NOT NULL,
+      customer_phone_number   TEXT,
+      customer_email_address  TEXT,
+      customer_address        TEXT,
+      id_type                 TEXT,  -- 'driver_license', 'state_id', 'military_id', etc.
+      id_number               TEXT,
+      id_expiration           TEXT,
+      id_issued_by            TEXT,
+      company_name            TEXT,
+      ein_number              TEXT,
+      is_business             INTEGER NOT NULL DEFAULT 0,
+      notes                   TEXT,
+      date_added              TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at              TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
     CREATE TABLE IF NOT EXISTS sale_transactions (
@@ -85,7 +97,68 @@ function runSchemaMigration(databaseConnection) {
       quantity_sold             INTEGER NOT NULL DEFAULT 1,
       agreed_unit_price_cents   INTEGER NOT NULL
     );
+
+    -- Daily operational logs for regulatory compliance ------------------------
+    CREATE TABLE IF NOT EXISTS daily_logs (
+      log_id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      log_date            TEXT    NOT NULL UNIQUE,  -- YYYY-MM-DD, one record per day
+      opening_inventory   TEXT,   -- JSON snapshot of inventory at start of day
+      purchases           TEXT,   -- JSON array of items purchased from public
+      sales               TEXT,   -- JSON array of items sold during the day
+      closing_inventory   TEXT,   -- JSON snapshot of inventory at end of day
+      cash_on_hand        REAL    NOT NULL DEFAULT 0,
+      checks_received     REAL    NOT NULL DEFAULT 0,
+      notes               TEXT,
+      created_at          TEXT    NOT NULL DEFAULT (datetime('now'))
+    );
+
+    -- Police / confiscation compliance log ------------------------------------
+    CREATE TABLE IF NOT EXISTS compliance_log (
+      compliance_id       INTEGER PRIMARY KEY AUTOINCREMENT,
+      log_date            TEXT    NOT NULL,
+      police_report_number TEXT,
+      officer_name        TEXT,
+      officer_badge       TEXT,
+      items_confiscated   TEXT,   -- JSON array describing confiscated items
+      reason              TEXT,
+      disposition         TEXT,
+      created_at          TEXT    NOT NULL DEFAULT (datetime('now'))
+    );
   `);
+
+  // Incremental column migrations for customers table -------------------------
+  // SQLite does not support IF NOT EXISTS on ALTER TABLE ADD COLUMN, so we
+  // check the existing columns via PRAGMA before attempting each migration.
+  addColumnIfMissing(databaseConnection, 'customers', 'customer_address', 'TEXT');
+  addColumnIfMissing(databaseConnection, 'customers', 'id_type',          'TEXT');
+  addColumnIfMissing(databaseConnection, 'customers', 'id_number',        'TEXT');
+  addColumnIfMissing(databaseConnection, 'customers', 'id_expiration',    'TEXT');
+  addColumnIfMissing(databaseConnection, 'customers', 'id_issued_by',     'TEXT');
+  addColumnIfMissing(databaseConnection, 'customers', 'company_name',     'TEXT');
+  addColumnIfMissing(databaseConnection, 'customers', 'ein_number',       'TEXT');
+  addColumnIfMissing(databaseConnection, 'customers', 'is_business',      'INTEGER NOT NULL DEFAULT 0');
+  addColumnIfMissing(databaseConnection, 'customers', 'notes',            'TEXT');
+  addColumnIfMissing(databaseConnection, 'customers', 'updated_at',       "TEXT NOT NULL DEFAULT (datetime('now'))");
+}
+
+/**
+ * Adds a column to an existing table only if it is not already present.
+ * This is the safe migration pattern for SQLite, which lacks
+ * `ALTER TABLE … ADD COLUMN IF NOT EXISTS`.
+ *
+ * @param {import('better-sqlite3').Database} databaseConnection
+ * @param {string} tableName
+ * @param {string} columnName
+ * @param {string} columnDefinition - SQLite type + optional constraints (e.g. "TEXT NOT NULL DEFAULT ''").
+ */
+function addColumnIfMissing(databaseConnection, tableName, columnName, columnDefinition) {
+  const existingColumns = databaseConnection.pragma(`table_info(${tableName})`);
+  const columnAlreadyExists = existingColumns.some((col) => col.name === columnName);
+  if (!columnAlreadyExists) {
+    databaseConnection.exec(
+      `ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnDefinition}`
+    );
+  }
 }
 
 module.exports = { openDatabase };

@@ -71,11 +71,27 @@ function validateSalvagePartData(salvagePartData) {
  * @param {string} customerData.customerLastName
  * @param {string} [customerData.customerPhoneNumber]
  * @param {string} [customerData.customerEmailAddress]
+ * @param {string} [customerData.customerAddress]
+ * @param {string} [customerData.idType]        - e.g. 'driver_license', 'state_id', 'military_id'
+ * @param {string} [customerData.idNumber]
+ * @param {string} [customerData.idExpiration]  - ISO date string (YYYY-MM-DD)
+ * @param {string} [customerData.idIssuedBy]
+ * @param {boolean|number} [customerData.isBusiness]
+ * @param {string} [customerData.companyName]   - Required when isBusiness is truthy
+ * @param {string} [customerData.einNumber]
+ * @param {string} [customerData.notes]
  * @returns {{ isValid: boolean, errorMessage: string | null }}
  */
 function validateCustomerData(customerData) {
-  const { customerFirstName, customerLastName, customerPhoneNumber, customerEmailAddress } =
-    customerData;
+  const {
+    customerFirstName,
+    customerLastName,
+    customerPhoneNumber,
+    customerEmailAddress,
+    idExpiration,
+    isBusiness,
+    companyName,
+  } = customerData;
 
   if (!customerFirstName || customerFirstName.trim().length === 0) {
     return { isValid: false, errorMessage: 'Customer first name is required.' };
@@ -100,6 +116,77 @@ function validateCustomerData(customerData) {
     if (!emailFormatRegex.test(customerEmailAddress)) {
       return { isValid: false, errorMessage: 'Email address format is invalid.' };
     }
+  }
+
+  if (idExpiration) {
+    const isoDateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!isoDateRegex.test(idExpiration)) {
+      return { isValid: false, errorMessage: 'ID expiration date must be in YYYY-MM-DD format.' };
+    }
+  }
+
+  if (isBusiness) {
+    if (!companyName || companyName.trim().length === 0) {
+      return { isValid: false, errorMessage: 'Company name is required for business customers.' };
+    }
+  }
+
+  return { isValid: true, errorMessage: null };
+}
+
+/**
+ * Validates the data required to create or update a daily operational log.
+ *
+ * @param {Object} dailyLogData
+ * @param {string} dailyLogData.logDate           - Required. ISO date (YYYY-MM-DD) for the log entry.
+ * @param {number} [dailyLogData.cashOnHand]      - Non-negative cash total at end of day.
+ * @param {number} [dailyLogData.checksReceived]  - Non-negative total of checks received.
+ * @returns {{ isValid: boolean, errorMessage: string | null }}
+ */
+function validateDailyLogData(dailyLogData) {
+  const { logDate, cashOnHand, checksReceived } = dailyLogData;
+
+  if (!logDate || logDate.trim().length === 0) {
+    return { isValid: false, errorMessage: 'Log date is required.' };
+  }
+
+  const isoDateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (!isoDateRegex.test(logDate.trim())) {
+    return { isValid: false, errorMessage: 'Log date must be in YYYY-MM-DD format.' };
+  }
+
+  if (cashOnHand !== undefined && cashOnHand !== null) {
+    if (typeof cashOnHand !== 'number' || cashOnHand < 0) {
+      return { isValid: false, errorMessage: 'Cash on hand must be a non-negative number.' };
+    }
+  }
+
+  if (checksReceived !== undefined && checksReceived !== null) {
+    if (typeof checksReceived !== 'number' || checksReceived < 0) {
+      return { isValid: false, errorMessage: 'Checks received must be a non-negative number.' };
+    }
+  }
+
+  return { isValid: true, errorMessage: null };
+}
+
+/**
+ * Validates the data required to create a compliance log entry (police / confiscation event).
+ *
+ * @param {Object} complianceLogData
+ * @param {string} complianceLogData.logDate - Required. ISO date (YYYY-MM-DD) for the event.
+ * @returns {{ isValid: boolean, errorMessage: string | null }}
+ */
+function validateComplianceLogData(complianceLogData) {
+  const { logDate } = complianceLogData;
+
+  if (!logDate || logDate.trim().length === 0) {
+    return { isValid: false, errorMessage: 'Log date is required.' };
+  }
+
+  const isoDateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (!isoDateRegex.test(logDate.trim())) {
+    return { isValid: false, errorMessage: 'Log date must be in YYYY-MM-DD format.' };
   }
 
   return { isValid: true, errorMessage: null };
@@ -151,4 +238,6 @@ module.exports = {
   validateSalvagePartData,
   validateCustomerData,
   validateSaleLineItems,
+  validateDailyLogData,
+  validateComplianceLogData,
 };
