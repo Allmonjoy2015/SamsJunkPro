@@ -14,6 +14,8 @@ const {
   validateSalvagePartData,
   validateCustomerData,
   validateSaleLineItems,
+  validateDailyLogData,
+  validateComplianceLogData,
 } = require('../src/shared/validation');
 
 // ---------------------------------------------------------------------------
@@ -142,6 +144,53 @@ describe('validateCustomerData', () => {
     expect(validationResult.isValid).toBe(false);
     expect(validationResult.errorMessage).toMatch(/email/i);
   });
+
+  test('returns isValid false when ID type is not in the allowed list', () => {
+    const customerDataWithInvalidIdType = { ...validCustomerData, idType: 'student_id' };
+    const validationResult = validateCustomerData(customerDataWithInvalidIdType);
+    expect(validationResult.isValid).toBe(false);
+    expect(validationResult.errorMessage).toMatch(/id type/i);
+  });
+
+  test('returns isValid true when a valid ID type is provided', () => {
+    const customerDataWithDriverLicense = { ...validCustomerData, idType: 'driver_license' };
+    const validationResult = validateCustomerData(customerDataWithDriverLicense);
+    expect(validationResult.isValid).toBe(true);
+    expect(validationResult.errorMessage).toBeNull();
+  });
+
+  test('returns isValid false when ID expiration is not in YYYY-MM-DD format', () => {
+    const customerDataWithBadExpiration = { ...validCustomerData, idExpiration: '12/31/2030' };
+    const validationResult = validateCustomerData(customerDataWithBadExpiration);
+    expect(validationResult.isValid).toBe(false);
+    expect(validationResult.errorMessage).toMatch(/expiration/i);
+  });
+
+  test('returns isValid false when is_business is true but company name is empty', () => {
+    const customerDataBusinessWithoutName = { ...validCustomerData, isBusiness: true, companyName: '' };
+    const validationResult = validateCustomerData(customerDataBusinessWithoutName);
+    expect(validationResult.isValid).toBe(false);
+    expect(validationResult.errorMessage).toMatch(/company name/i);
+  });
+
+  test('returns isValid true for a complete business customer record', () => {
+    const businessCustomerData = {
+      ...validCustomerData,
+      isBusiness: true,
+      companyName: "Sam's Auto Parts",
+      einNumber: '12-3456789',
+    };
+    const validationResult = validateCustomerData(businessCustomerData);
+    expect(validationResult.isValid).toBe(true);
+    expect(validationResult.errorMessage).toBeNull();
+  });
+
+  test('returns isValid false when EIN does not contain exactly 9 digits', () => {
+    const customerDataWithShortEin = { ...validCustomerData, companyName: 'ACME', isBusiness: true, einNumber: '12-345' };
+    const validationResult = validateCustomerData(customerDataWithShortEin);
+    expect(validationResult.isValid).toBe(false);
+    expect(validationResult.errorMessage).toMatch(/ein/i);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -200,5 +249,87 @@ describe('validateSaleLineItems', () => {
     ];
     const validationResult = validateSaleLineItems(lineItemsWithZeroPrice);
     expect(validationResult.isValid).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// validateDailyLogData
+// ---------------------------------------------------------------------------
+
+describe('validateDailyLogData', () => {
+  /** A valid daily log data object reused across tests. */
+  const validDailyLogData = {
+    logDate: '2026-03-22',
+    cashOnHand: 250.00,
+    checksReceived: 75.00,
+    notes: 'Busy Saturday.',
+  };
+
+  test('returns isValid true for a complete and correct daily log entry', () => {
+    const validationResult = validateDailyLogData(validDailyLogData);
+    expect(validationResult.isValid).toBe(true);
+    expect(validationResult.errorMessage).toBeNull();
+  });
+
+  test('returns isValid true when only the required logDate is provided', () => {
+    const validationResult = validateDailyLogData({ logDate: '2026-03-22' });
+    expect(validationResult.isValid).toBe(true);
+    expect(validationResult.errorMessage).toBeNull();
+  });
+
+  test('returns isValid false when logDate is missing', () => {
+    const validationResult = validateDailyLogData({ cashOnHand: 100 });
+    expect(validationResult.isValid).toBe(false);
+    expect(validationResult.errorMessage).toMatch(/log date/i);
+  });
+
+  test('returns isValid false when logDate is not in YYYY-MM-DD format', () => {
+    const validationResult = validateDailyLogData({ logDate: '03/22/2026' });
+    expect(validationResult.isValid).toBe(false);
+    expect(validationResult.errorMessage).toMatch(/yyyy-mm-dd/i);
+  });
+
+  test('returns isValid false when cashOnHand is a negative number', () => {
+    const logDataWithNegativeCash = { ...validDailyLogData, cashOnHand: -10 };
+    const validationResult = validateDailyLogData(logDataWithNegativeCash);
+    expect(validationResult.isValid).toBe(false);
+    expect(validationResult.errorMessage).toMatch(/cash on hand/i);
+  });
+
+  test('returns isValid false when checksReceived is a negative number', () => {
+    const logDataWithNegativeChecks = { ...validDailyLogData, checksReceived: -5 };
+    const validationResult = validateDailyLogData(logDataWithNegativeChecks);
+    expect(validationResult.isValid).toBe(false);
+    expect(validationResult.errorMessage).toMatch(/checks received/i);
+  });
+
+  test('returns isValid true when cashOnHand is zero', () => {
+    const logDataWithZeroCash = { ...validDailyLogData, cashOnHand: 0 };
+    const validationResult = validateDailyLogData(logDataWithZeroCash);
+    expect(validationResult.isValid).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// validateComplianceLogData
+// ---------------------------------------------------------------------------
+
+describe('validateComplianceLogData', () => {
+  test('returns isValid true for a record with a valid log date', () => {
+    const validationResult = validateComplianceLogData({ logDate: '2026-03-22' });
+    expect(validationResult.isValid).toBe(true);
+    expect(validationResult.errorMessage).toBeNull();
+  });
+
+  test('returns isValid false when logDate is missing', () => {
+    const validationResult = validateComplianceLogData({ officerName: 'Officer Smith' });
+    expect(validationResult.isValid).toBe(false);
+    expect(validationResult.errorMessage).toMatch(/log date/i);
+  });
+
+  test('returns isValid false when logDate is not in YYYY-MM-DD format', () => {
+    const validationResult = validateComplianceLogData({ logDate: 'March 22, 2026' });
+    expect(validationResult.isValid).toBe(false);
+    expect(validationResult.errorMessage).toMatch(/yyyy-mm-dd/i);
   });
 });

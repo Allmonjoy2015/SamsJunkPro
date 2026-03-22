@@ -39,7 +39,9 @@ function openDatabase() {
 }
 
 /**
- * Creates all required tables if they do not already exist.
+ * Creates all required tables if they do not already exist, and applies any
+ * additive column migrations for tables that may have been created by an
+ * earlier version of the application.
  * This function is idempotent — safe to call on every app launch.
  *
  * @param {import('better-sqlite3').Database} databaseConnection
@@ -61,12 +63,22 @@ function runSchemaMigration(databaseConnection) {
     );
 
     CREATE TABLE IF NOT EXISTS customers (
-      customer_id           INTEGER PRIMARY KEY AUTOINCREMENT,
-      customer_first_name   TEXT NOT NULL,
-      customer_last_name    TEXT NOT NULL,
-      customer_phone_number TEXT,
-      customer_email_address TEXT,
-      date_added            TEXT NOT NULL DEFAULT (datetime('now'))
+      customer_id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      customer_first_name      TEXT    NOT NULL,
+      customer_last_name       TEXT    NOT NULL,
+      customer_phone_number    TEXT,
+      customer_email_address   TEXT,
+      customer_address         TEXT,
+      id_type                  TEXT,   -- 'driver_license', 'state_id', 'military_id', etc.
+      id_number                TEXT,
+      id_expiration            TEXT,
+      id_issued_by             TEXT,
+      company_name             TEXT,
+      ein_number               TEXT,
+      is_business              INTEGER NOT NULL DEFAULT 0,  -- 0 = individual, 1 = business
+      notes                    TEXT,
+      date_added               TEXT    NOT NULL DEFAULT (datetime('now')),
+      updated_at               TEXT    NOT NULL DEFAULT (datetime('now'))
     );
 
     CREATE TABLE IF NOT EXISTS sale_transactions (
@@ -85,7 +97,63 @@ function runSchemaMigration(databaseConnection) {
       quantity_sold             INTEGER NOT NULL DEFAULT 1,
       agreed_unit_price_cents   INTEGER NOT NULL
     );
+
+    -- Daily operating log for regulatory compliance (e.g. state scrap-metal laws).
+    CREATE TABLE IF NOT EXISTS daily_logs (
+      log_id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      log_date            TEXT    NOT NULL UNIQUE,
+      opening_inventory   TEXT,   -- JSON snapshot of inventory at day open
+      purchases           TEXT,   -- JSON array of items purchased that day
+      sales               TEXT,   -- JSON array of items sold that day
+      closing_inventory   TEXT,   -- JSON snapshot of inventory at day close
+      cash_on_hand        REAL    NOT NULL DEFAULT 0,
+      checks_received     REAL    NOT NULL DEFAULT 0,
+      notes               TEXT,
+      created_at          TEXT    NOT NULL DEFAULT (datetime('now'))
+    );
+
+    -- Law-enforcement interaction log for regulatory compliance.
+    CREATE TABLE IF NOT EXISTS compliance_log (
+      incident_id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      log_date             TEXT    NOT NULL,
+      police_report_number TEXT,
+      officer_name         TEXT,
+      officer_badge        TEXT,
+      items_confiscated    TEXT,   -- JSON array of confiscated items
+      reason               TEXT,
+      disposition          TEXT,
+      created_at           TEXT    NOT NULL DEFAULT (datetime('now'))
+    );
   `);
+
+  // ---------------------------------------------------------------------------
+  // Additive column migrations for pre-existing customers tables that were
+  // created before the extended schema was introduced.  Each ALTER TABLE is
+  // wrapped in a try/catch so that re-running on an already-migrated database
+  // is safe (SQLite raises an error when a column already exists).
+  // ---------------------------------------------------------------------------
+  const customerColumnsToAdd = [
+    { name: 'customer_address', definition: 'TEXT' },
+    { name: 'id_type',          definition: 'TEXT' },
+    { name: 'id_number',        definition: 'TEXT' },
+    { name: 'id_expiration',    definition: 'TEXT' },
+    { name: 'id_issued_by',     definition: 'TEXT' },
+    { name: 'company_name',     definition: 'TEXT' },
+    { name: 'ein_number',       definition: 'TEXT' },
+    { name: 'is_business',      definition: "INTEGER NOT NULL DEFAULT 0" },
+    { name: 'notes',            definition: 'TEXT' },
+    { name: 'updated_at',       definition: "TEXT NOT NULL DEFAULT (datetime('now'))" },
+  ];
+
+  for (const column of customerColumnsToAdd) {
+    try {
+      databaseConnection.exec(
+        `ALTER TABLE customers ADD COLUMN ${column.name} ${column.definition}`
+      );
+    } catch (_duplicateColumnError) {
+      // Column already exists — no action required.
+    }
+  }
 }
 
 module.exports = { openDatabase };
