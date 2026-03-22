@@ -74,6 +74,13 @@ function validateSalvagePartData(salvagePartData) {
  * @returns {{ isValid: boolean, errorMessage: string | null }}
  */
 function validateCustomerData(customerData) {
+  if (
+    customerData === null ||
+    typeof customerData !== 'object' ||
+    Array.isArray(customerData)
+  ) {
+    return { isValid: false, errorMessage: 'Invalid customer data payload.' };
+  }
   const { customerFirstName, customerLastName, customerPhoneNumber, customerEmailAddress } =
     customerData;
 
