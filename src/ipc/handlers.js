@@ -7,8 +7,8 @@
  * process uses to interact with the SQLite database through Electron's
  * contextBridge / ipcMain.
  *
- * Each handler validates its arguments and returns a consistent response
- * envelope: { success: boolean, data?: any, error?: string }
+ * Each handler forwards its arguments to the database layer and returns a
+ * consistent response envelope: { success: boolean, data?: any, error?: string }
  */
 
 const { ipcMain } = require('electron');
