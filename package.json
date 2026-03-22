@@ -1,0 +1,31 @@
+{
+  "name": "samsjunkpro",
+  "version": "1.0.0",
+  "description": "Scrapyard management desktop app built with Electron",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "jest --testPathPattern=tests/",
+    "build": "electron-builder"
+  },
+  "author": "Sam's Junk Pro",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.0.0",
+    "jest": "^29.7.0"
+  },
+  "dependencies": {
+    "better-sqlite3": "^9.0.0"
+  },
+  "jest": {
+    "testEnvironment": "node"
+  },
+  "build": {
+    "appId": "com.samsjunkpro.app",
+    "productName": "SamsJunkPro",
+    "directories": {
+      "output": "dist"
+    }
+  }
+}
