@@ -19,6 +19,15 @@ const DEFAULT_TAX_RATE_LABEL = '8%';
 /** Condition grades used when cataloguing a salvage part. */
 const PART_CONDITION_OPTIONS = Object.freeze(['Excellent', 'Good', 'Fair', 'Poor', 'For Parts Only']);
 
+/** Acceptable government-issued ID types collected for regulatory compliance. */
+const CUSTOMER_ID_TYPE_OPTIONS = Object.freeze([
+  'driver_license',
+  'state_id',
+  'military_id',
+  'passport',
+  'other',
+]);
+
 /** Sale status values stored in the `sales` database table. */
 const SALE_STATUS = Object.freeze({
   PENDING: 'pending',
@@ -50,6 +59,14 @@ const IPC_CHANNELS = Object.freeze({
   SALES_GET_SUMMARY: 'sales:getSummary',
   SALES_VOID_SALE: 'sales:voidSale',
 
+  // Compliance / daily-log channels
+  COMPLIANCE_ADD_DAILY_LOG: 'compliance:addDailyLog',
+  COMPLIANCE_GET_DAILY_LOGS: 'compliance:getDailyLogs',
+  COMPLIANCE_GET_DAILY_LOG_BY_DATE: 'compliance:getDailyLogByDate',
+  COMPLIANCE_ADD_INCIDENT: 'compliance:addIncident',
+  COMPLIANCE_GET_INCIDENTS: 'compliance:getIncidents',
+  COMPLIANCE_GET_INCIDENT_BY_ID: 'compliance:getIncidentById',
+
   // Report channels
   REPORTS_GET_INVENTORY_SUMMARY: 'reports:getInventorySummary',
   REPORTS_GET_SALES_SUMMARY: 'reports:getSalesSummary',
@@ -62,6 +79,7 @@ module.exports = {
   DEFAULT_TAX_RATE_DECIMAL,
   DEFAULT_TAX_RATE_LABEL,
   PART_CONDITION_OPTIONS,
+  CUSTOMER_ID_TYPE_OPTIONS,
   SALE_STATUS,
   IPC_CHANNELS,
 };

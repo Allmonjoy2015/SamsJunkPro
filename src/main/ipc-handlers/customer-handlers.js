@@ -84,10 +84,17 @@ function handleAddCustomer(databaseConnection, _event, newCustomerData) {
   }
 
   const insertCustomerStatement = databaseConnection.prepare(`
-    INSERT INTO customers
-      (customer_first_name, customer_last_name, customer_phone_number, customer_email_address)
-    VALUES
-      (@customerFirstName, @customerLastName, @customerPhoneNumber, @customerEmailAddress)
+    INSERT INTO customers (
+      customer_first_name, customer_last_name,
+      customer_phone_number, customer_email_address, customer_address,
+      id_type, id_number, id_expiration, id_issued_by,
+      company_name, ein_number, is_business, notes
+    ) VALUES (
+      @customerFirstName, @customerLastName,
+      @customerPhoneNumber, @customerEmailAddress, @customerAddress,
+      @idType, @idNumber, @idExpiration, @idIssuedBy,
+      @companyName, @einNumber, @isBusiness, @notes
+    )
   `);
 
   const insertResult = insertCustomerStatement.run({
@@ -99,6 +106,17 @@ function handleAddCustomer(databaseConnection, _event, newCustomerData) {
     customerEmailAddress: newCustomerData.customerEmailAddress
       ? newCustomerData.customerEmailAddress.trim().toLowerCase()
       : null,
+    customerAddress: newCustomerData.customerAddress
+      ? newCustomerData.customerAddress.trim()
+      : null,
+    idType: newCustomerData.idType || null,
+    idNumber: newCustomerData.idNumber ? newCustomerData.idNumber.trim() : null,
+    idExpiration: newCustomerData.idExpiration ? newCustomerData.idExpiration.trim() : null,
+    idIssuedBy: newCustomerData.idIssuedBy ? newCustomerData.idIssuedBy.trim() : null,
+    companyName: newCustomerData.companyName ? newCustomerData.companyName.trim() : null,
+    einNumber: newCustomerData.einNumber ? newCustomerData.einNumber.trim() : null,
+    isBusiness: newCustomerData.isBusiness ? 1 : 0,
+    notes: newCustomerData.notes ? newCustomerData.notes.trim() : null,
   });
 
   return { success: true, customerId: insertResult.lastInsertRowid };
@@ -127,7 +145,17 @@ function handleUpdateCustomerContactInfo(databaseConnection, _event, updatedCust
       customer_first_name    = @customerFirstName,
       customer_last_name     = @customerLastName,
       customer_phone_number  = @customerPhoneNumber,
-      customer_email_address = @customerEmailAddress
+      customer_email_address = @customerEmailAddress,
+      customer_address       = @customerAddress,
+      id_type                = @idType,
+      id_number              = @idNumber,
+      id_expiration          = @idExpiration,
+      id_issued_by           = @idIssuedBy,
+      company_name           = @companyName,
+      ein_number             = @einNumber,
+      is_business            = @isBusiness,
+      notes                  = @notes,
+      updated_at             = datetime('now')
     WHERE customer_id = @customerId
   `);
 
@@ -141,6 +169,17 @@ function handleUpdateCustomerContactInfo(databaseConnection, _event, updatedCust
     customerEmailAddress: updatedCustomerData.customerEmailAddress
       ? updatedCustomerData.customerEmailAddress.trim().toLowerCase()
       : null,
+    customerAddress: updatedCustomerData.customerAddress
+      ? updatedCustomerData.customerAddress.trim()
+      : null,
+    idType: updatedCustomerData.idType || null,
+    idNumber: updatedCustomerData.idNumber ? updatedCustomerData.idNumber.trim() : null,
+    idExpiration: updatedCustomerData.idExpiration ? updatedCustomerData.idExpiration.trim() : null,
+    idIssuedBy: updatedCustomerData.idIssuedBy ? updatedCustomerData.idIssuedBy.trim() : null,
+    companyName: updatedCustomerData.companyName ? updatedCustomerData.companyName.trim() : null,
+    einNumber: updatedCustomerData.einNumber ? updatedCustomerData.einNumber.trim() : null,
+    isBusiness: updatedCustomerData.isBusiness ? 1 : 0,
+    notes: updatedCustomerData.notes ? updatedCustomerData.notes.trim() : null,
   });
 
   if (updateResult.changes === 0) {
